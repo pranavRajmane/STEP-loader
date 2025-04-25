@@ -8,7 +8,7 @@ import {
   Vector2,
   PerspectiveCamera
 } from 'three';
-import { makeBottle, setupThreeJSViewport } from '../bottle - basic/library';
+import { setupThreeJSViewport } from '../bottle - basic/library';
 import visualize, { importSTEP } from '../../common/visualize';
 
 // Modified to handle the new structure with face mapping
@@ -181,32 +181,4 @@ document.addEventListener('click', (event) => {
   }
 });
   
-  let width = 50, height = 70, thickness = 30;
-  let bottle = makeBottle(openCascade, width, height, thickness);
-  
-  // For the bottle, we're still using the legacy approach (direct shape)
-  addShapeToScene(openCascade, bottle, scene);
-
-  window.changeSliderWidth = value => {
-    width = parseInt(value);
-    scene.remove(scene.getObjectByName("shape"));
-    let bottle = makeBottle(openCascade, width, height, thickness);
-    const now = Date.now();
-    addShapeToScene(openCascade, bottle, scene);
-    console.log(Date.now() - now);
-  };
-  
-  window.changeSliderHeight = value => {
-    height = parseInt(value);
-    scene.remove(scene.getObjectByName("shape"));
-    let bottle = makeBottle(openCascade, width, height, thickness);
-    addShapeToScene(openCascade, bottle, scene);
-  };
-  
-  window.changeSliderThickness = value => {
-    thickness = parseInt(value);
-    scene.remove(scene.getObjectByName("shape"));
-    let bottle = makeBottle(openCascade, width, height, thickness);
-    addShapeToScene(openCascade, bottle, scene);
-  };
 });
