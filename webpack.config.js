@@ -5,15 +5,14 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: () => {
-    result = fs.readdirSync(__dirname + '/src/demos').reduce(function (entries, dir) {
-      if (fs.statSync(path.join(__dirname + '/src/demos', dir)).isDirectory() && dir !== '__build__')
-      {
-        entries[dir] =path.join(__dirname + '/src/demos', dir, 'index.js')
+    const entries = {};
+    fs.readdirSync(path.join(__dirname, 'src/demos')).forEach(dir => {
+      if (fs.statSync(path.join(__dirname, 'src/demos', dir)).isDirectory() && dir !== '__build__') {
+        // Use path.join for correct path resolution
+        entries[dir] = path.join(__dirname, 'src/demos', dir, 'index.js');
       }
-
-      return entries
-    }, {})
-    return result
+    });
+    return entries;
   },
   devServer: {
     contentBase: path.join(__dirname, 'src'),
@@ -35,13 +34,15 @@ module.exports = {
     ]
   },
   plugins: [
-    ...fs.readdirSync(__dirname + '/src/demos').map(function(dir){
-      return new HtmlWebpackPlugin({
-        template: path.join(__dirname + '/src/demos', dir, 'index.html'),
-        filename: `demos/${dir}/index.html`,
-        chunks: [dir]
-      })
-    }),
+    ...fs.readdirSync(path.join(__dirname, 'src/demos'))
+      .filter(dir => fs.statSync(path.join(__dirname, 'src/demos', dir)).isDirectory() && dir !== '__build__')
+      .map(dir => {
+        return new HtmlWebpackPlugin({
+          template: path.join(__dirname, 'src/demos', dir, 'index.html'),
+          filename: `demos/${dir}/index.html`,
+          chunks: [dir]
+        });
+      }),
     new CopyPlugin({
       patterns: [
         { from: './src/index.html', to: 'index.html' },
