@@ -11,9 +11,7 @@ import {
 import { setupThreeJSViewport } from './library.js';
 import visualize, { importSTEP } from '../../common/visualize.js';
 import { loadSTEPFile } from "./library.js";
-// Removed import from integration.js
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
-// Removed import from opencascadeStlExporter.js
 import { 
   fixSelectionState, 
   validateFaceIndices, 
@@ -57,7 +55,6 @@ selectionCountElement.textContent = '';
 uiContainer.appendChild(selectionCountElement);
 
 // Current selection state
-// Create as a plain object that can be modified
 let selectionState = {
   mode: null, // 'inlet', 'outlet', etc.
   selectedFaces: new Set(),
@@ -222,6 +219,72 @@ let addShapeToScene = async (openCascade, shapeData, scene) => {
 
 let openCascadeInstance = null; // Store OpenCascade instance globally
 
+// Function to check and load uploaded model
+async function checkAndLoadUploadedModel(openCascade) {
+  console.log("Checking for uploaded model...");
+  
+  try {
+    const modelDataStr = sessionStorage.getItem('pendingCADModel');
+    
+    if (modelDataStr) {
+      const modelData = JSON.parse(modelDataStr);
+      
+      console.log("Found uploaded model metadata:", modelData.name);
+      statusElement.textContent = `Loading: ${modelData.name}`;
+      
+      // Create a file from the blob URL
+      const response = await fetch(modelData.blobUrl);
+      const blob = await response.blob();
+      const file = new File([blob], modelData.name, { type: modelData.type });
+      
+      // Clean up the blob URL
+      URL.revokeObjectURL(modelData.blobUrl);
+      
+      // Remove the pending model data
+      sessionStorage.removeItem('pendingCADModel');
+      
+      // Load the file
+      await loadSTEPFile(openCascade, file, addShapeToScene, scene);
+      
+      console.log("Model loaded successfully");
+    } else {
+      console.log("No pending model data found");
+      statusElement.textContent = 'No model uploaded. Use the file selector below.';
+    }
+  } catch (error) {
+    console.error("Error loading uploaded model:", error);
+    statusElement.textContent = 'Error loading uploaded model. Use the file selector below.';
+  }
+}
+
+// Export to STL function
+function exportToSTL() {
+  const group = scene.getObjectByName("shape");
+  if (!group) {
+    alert("No model to export");
+    return;
+  }
+  
+  const exporter = new STLExporter();
+  const stlString = exporter.parse(group);
+  
+  // Create a blob and trigger download
+  const blob = new Blob([stlString], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'model.stl';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Function to go back to upload page
+function goToUploadPage() {
+  window.location.href = '../../index.html';
+}
+
 initOpenCascade().then(openCascade => {
   console.log("OpenCascade initialized");
 
@@ -229,6 +292,9 @@ initOpenCascade().then(openCascade => {
   window.openCascadeInstance = openCascade;
   openCascadeInstance = openCascade; // Also store locally for use in this module
   console.log("OpenCascade instance stored globally for reference");
+  
+  // Check for uploaded model first
+  checkAndLoadUploadedModel(openCascade);
 
   // Allow users to upload STEP Files by either "File Selector" or "Drag and Drop".
   document.getElementById("step-file").addEventListener(
@@ -253,7 +319,7 @@ initOpenCascade().then(openCascade => {
     const viewport = document.getElementById("viewport");
     
     // Only proceed if the click was within the viewport
-    if (viewport.contains(event.target)) {
+    if (viewport && viewport.contains(event.target)) {
       // Calculate normalized device coordinates (-1 to +1)
       const rect = viewport.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -313,72 +379,68 @@ initOpenCascade().then(openCascade => {
     }
   });
   
+  // Rest of the initialization code remains the same...
   console.log("Setting up selection state fix...");
-  // Fix the selection state structure - clone the object instead of reassigning
   const fixedState = fixSelectionState(selectionState);
-  // Copy properties over instead of reassigning
   Object.assign(selectionState, fixedState);
   
   console.log("Setting up enhanced addShapeToScene...");
-  // Store original function
   const originalAddShapeToScene = addShapeToScene;
-  // Create new function with the same name
   addShapeToScene = async function(openCascade, shapeData, scene) {
     const result = await originalAddShapeToScene(openCascade, shapeData, scene);
-    
-    // Validate mesh face indices
     validateSceneMeshes(scene);
-    
-    // Remove reference to integrateSTLExporter which is no longer available
-    
     return result;
   };
   
   console.log("Setting up enhanced confirmSelection...");
-  // Store a reference to the original confirmSelection method
   const originalConfirmSelection = selectionState.confirmSelection;
-  
-  // Create an enhanced version of the confirmSelection function
   const enhancedConfirmSelection = function() {
     console.log("Enhanced confirmSelection called");
-    
-    // Make sure face indices are stored as an array, not a Set
     const facesArray = Array.from(selectionState.selectedFaces);
-    
-    // Store the selection
     selectionState.physicalGroups.set(selectionState.mode, facesArray);
-    
-    // Call the original function
     originalConfirmSelection();
-    
-    // Log the newly created group
     console.log(`Created group '${selectionState.mode}' with faces:`, facesArray);
-    
-    // Backup the selection state
     backupSelectionState(selectionState);
-    
-    // Validate the face indices
     validateFaceIndices(selectionState);
   };
   
-  // Replace the confirmSelection method
   selectionState.confirmSelection = enhancedConfirmSelection;
   
+  // Add export buttons to the UI container
+  const exportContainer = document.createElement('div');
+  exportContainer.style.marginTop = '10px';
+  exportContainer.style.marginBottom = '10px';
+
+  const exportToggles = document.createElement('div');
+  exportToggles.style.display = 'flex';
+  exportToggles.style.gap = '5px';
+  exportToggles.style.marginBottom = '5px';
+
+  const exportSTLBtn = document.createElement('button');
+  exportSTLBtn.textContent = 'Export STL';
+  exportSTLBtn.onclick = () => exportToSTL();
+  exportToggles.appendChild(exportSTLBtn);
+
+  const backBtn = document.createElement('button');
+  backBtn.textContent = 'Upload New';
+  backBtn.onclick = () => goToUploadPage();
+  exportToggles.appendChild(backBtn);
+
+  exportContainer.appendChild(exportToggles);
+  uiContainer.appendChild(exportContainer);
+  
   console.log("Setting up server storage...");
-  // Set up server-side STL storage with OpenCascade instance
   try {
-    // Wait a brief moment to ensure all components are initialized
     setTimeout(() => {
       if (selectionState && scene) {
         const projectId = setupServerStorage(selectionState, scene, {
           serverEndpoint: '/api/store-stl',
           notifyUser: true,
-          openCascade: openCascade // Pass the OpenCascade instance explicitly
+          openCascade: openCascade
         });
         
         console.log(`Server storage initialized. Project ID: ${projectId}`);
         
-        // Optional: Add project ID display to the UI
         const projectInfoElement = document.createElement('div');
         projectInfoElement.style.position = 'absolute';
         projectInfoElement.style.top = '10px';
@@ -399,7 +461,6 @@ initOpenCascade().then(openCascade => {
   
   console.log("OpenCascade initialization complete");
 });
-
 
 // Helper function to get faces from a physical group (useful for future operations)
 function getFacesFromGroup(groupName) {
