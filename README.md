@@ -34,7 +34,7 @@ You can also use [CodeSandbox](https://codesandbox.io/s/github/donalffons/openca
 
     ```sh
     yarn # with yarn
-    npm i # with npm
+    npm i  with npm
     ```
 
 2. Start the example

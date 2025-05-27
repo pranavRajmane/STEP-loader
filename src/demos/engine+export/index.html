@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>OpenCascade.js Model Viewer</title>
+  <script src="../../common/freecadIntegration.js"></script>
 </head>
 <style>
   body {
@@ -90,6 +91,19 @@
       <p>Please wait while the model is being processed.</p>
     </div>
   </div>
+  <!-- Add to your menu section -->
+<div class="control-group">
+  <label>FreeCAD Service:</label>
+  <span id="service-status">⚡ Checking...</span>
+</div>
+
+<div class="control-group">
+  <button id="analyze-casting" class="analysis-button" disabled>
+      🔍 Analyze Casting Features
+  </button>
+</div>
+
+
   
   <div id="modelInfo">
     <h4>Current Model</h4>
