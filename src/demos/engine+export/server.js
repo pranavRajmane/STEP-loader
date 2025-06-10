@@ -122,6 +122,30 @@ app.get('/api/project/:projectId', (req, res) => {
   }
 });
 
+// API to receive STL data and save it
+app.post('/api/save-stl', (req, res) => {
+  const { filename, stlData } = req.body;
+
+  if (!filename || !stlData) {
+    return res.status(400).send('Missing filename or STL data');
+  }
+
+  const outputPath = path.join(__dirname, 'exports', filename); // Example: ./exports/model.stl
+
+  // Ensure directory exists
+  fs.mkdir(path.dirname(outputPath), { recursive: true }, (mkdirErr) => {
+    if (mkdirErr) return res.status(500).send('Failed to create directory');
+
+    fs.writeFile(outputPath, stlData, (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send('Error saving STL file');
+      }
+      res.send('STL file saved on server');
+    });
+  });
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
