@@ -258,27 +258,56 @@ async function checkAndLoadUploadedModel(openCascade) {
 }
 
 // Export to STL function
+// function exportToSTL() {
+//   const group = scene.getObjectByName("shape");
+//   if (!group) {
+//     alert("No model to export");
+//     return;
+//   }
+  
+//   const exporter = new STLExporter();
+//   const stlString = exporter.parse(group);
+  
+//   // Create a blob and trigger download
+//   const blob = new Blob([stlString], { type: 'text/plain' });
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = 'model.stl';
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+//   URL.revokeObjectURL(url);
+// }
 function exportToSTL() {
   const group = scene.getObjectByName("shape");
   if (!group) {
     alert("No model to export");
     return;
   }
-  
+
   const exporter = new STLExporter();
-  const stlString = exporter.parse(group);
-  
-  // Create a blob and trigger download
-  const blob = new Blob([stlString], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'model.stl';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const stlString = exporter.parse(group); // ASCII STL
+
+  // Send to backend (same server)
+  fetch('/api/save-stl', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      filename: 'model.stl',
+      stlData: stlString
+    })
+  })
+  .then(res => res.text())
+  .then(msg => alert(msg))
+  .catch(err => {
+    console.error(err);
+    alert('Failed to save STL');
+  });
 }
+
 
 // Function to go back to upload page
 function goToUploadPage() {
